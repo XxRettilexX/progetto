@@ -1,5 +1,3 @@
-// src/data.ts
-
 export type MetricKey = "speed" | "power" | "energy";
 
 export interface MetricsMeta {
@@ -10,56 +8,40 @@ export interface MetricsMeta {
 
 export const METRICS: Record<MetricKey, MetricsMeta> = {
   speed: { label: "Velocità", unit: "km/h", color: "#06b6d4" },
-  power: { label: "Potenza", unit: "kW", color: "#22c55e" },
+  power: { label: "Potenza", unit: "kW", color: "#fbbf24" },
   energy: { label: "Energia", unit: "kWh", color: "#a78bfa" },
 };
 
 export interface DataPoint {
-  date: string;
+  date: string; // orario leggibile
   speed: number;
   power: number;
   energy: number;
-  latitude?: number;
-  longitude?: number;
 }
 
-export function mean(arr: number[]) {
-  return arr.length ? arr.reduce((s, x) => s + x, 0) / arr.length : 0;
-}
+type AnyRow = Record<string, unknown>;
 
-export function filterData(
-  data: DataPoint[],
-  mode: "preset" | "custom",
-  days?: number,
-  start?: string,
-  end?: string
-): DataPoint[] {
-  if (!data.length) return [];
-  if (mode !== "custom") {
-    const n = days ?? 30;
-    const s = new Date();
-    s.setDate(s.getDate() - (n - 1));
-    return data.filter((r) => new Date(r.date) >= s);
-  }
-  const S = start ? new Date(start) : new Date(data[0].date);
-  const E = end ? new Date(end) : new Date(data[data.length - 1].date);
-  return data.filter((r) => {
-    const d = new Date(r.date);
-    return d >= S && d <= E;
-  });
-}
+export function toDataPoint(row: AnyRow): DataPoint | null {
+  const raw = row.timestamp ?? row.date ?? row.created_at;
+  if (!raw) return null;
 
-export function weeklyAverage(data: DataPoint[], key: MetricKey) {
-  const map = new Map<string, number[]>();
-
-  data.forEach((d) => {
-    const week = d.date;
-    if (!map.has(week)) map.set(week, []);
-    map.get(week)!.push(d[key]);
+  const d = new Date(String(raw));
+  const date = d.toLocaleTimeString("it-IT", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
   });
 
-  return [...map.entries()].map(([week, arr]) => ({
-    week,
-    value: mean(arr),
-  }));
+  const speed = Number(row.speed_kmh ?? row.speed ?? 0);
+  const power = Number(row.power_kw ?? row.power ?? 0);
+  const energy = Number(row.energy_kwh ?? row.energy ?? 0);
+
+  return { date, speed, power, energy };
+}
+
+export function normalize(input: unknown): DataPoint[] {
+  if (!Array.isArray(input)) return [];
+  return input
+    .map((r) => toDataPoint(r as AnyRow))
+    .filter(Boolean) as DataPoint[];
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { api } from "./api";
 import {
   METRICS,
@@ -41,7 +41,9 @@ export default function App() {
     };
   }, []);
 
-  const latest = serverData.at(-1) ?? null;
+  const latest: DataPoint | null =
+    serverData.length > 0 ? serverData[serverData.length - 1] : null;
+
   const m = METRICS[metric];
 
   return (
@@ -68,7 +70,11 @@ export default function App() {
       </div>
 
       {loading && <div className="small">⏳ Caricamento…</div>}
-      {error && <div className="small" style={{ color: "#f87171" }}>⚠️ {error}</div>}
+      {error && (
+        <div className="small" style={{ color: "#f87171" }}>
+          ⚠️ {error}
+        </div>
+      )}
 
       <div className="grid" style={{ marginTop: 12 }}>
         <div className="card" style={{ minHeight: 380 }}>
@@ -81,7 +87,7 @@ export default function App() {
           {latest ? (
             <TrainMap latest={latest} power={latest.power} />
           ) : (
-            <div>Nessun dato ancora disponibile</div>
+            <div className="small">Nessun dato ancora disponibile</div>
           )}
         </div>
       </div>
